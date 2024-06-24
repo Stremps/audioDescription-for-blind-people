@@ -128,8 +128,11 @@ while True:
         print("Invalid option, try again!")
 
     # time for the user change the screen
-    print("You have 3 seconds to change the scree to the application...")
+    print("You have 3 seconds to change to the screen application...")
     time.sleep(3)
+
+    # Start counting the time
+    startTime = time.perf_counter()
 
     # Generate a timestamp
     timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
@@ -166,6 +169,10 @@ while True:
 
     # Convert the OpenCV image to a base64 encoded string
     base64_string = convert_cv2_to_base64(cropped_image)
+
+    # Time of printScreen, crop and conversion
+    printScreenTime = time.perf_counter() - startTime
+
     if inputOption == '1':
         role = "You are a person that provides professional audio description services. Help me describe the images I show you in Brazilian portuguese."
         text = "Please describe this image. Do not start the phrase with 'A imagem '"
@@ -198,6 +205,9 @@ while True:
 
     text = response.choices[0].message.content
 
+    # Time of sending and receiving data from GPT-4o
+    responseTime = time.perf_counter() - startTime - printScreenTime
+
     print(text)
 
     with open(filenamet, 'w') as file:
@@ -205,7 +215,21 @@ while True:
 
     text_to_speech(text, filenamem)
 
+    textToMP3Time = time.perf_counter() - startTime - printScreenTime - responseTime
+
     play_mp3(filenamem)
+
+    # Time of the audio created
+    audioTime = time.perf_counter() - startTime - printScreenTime - responseTime - textToMP3Time
+
+    # Total time of the application
+    totalTime = time.perf_counter() - startTime
+
+    print(f"PrintScreen time: {printScreenTime}")
+    print(f"Response from IA time: {responseTime}")
+    print(f"Conversion text to MP3 time: {textToMP3Time}")
+    print(f"Audio time: {audioTime}")
+    print(f"Total Time: {totalTime}")
 
 # Display the cropped image using OpenCV
 # cv2.imshow('Cropped Screenshot', cropped_image)
