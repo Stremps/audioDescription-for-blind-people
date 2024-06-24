@@ -1,7 +1,3 @@
-# Audio Description Application
-
-This application captures the screen, generates an audio description using the ChatGPT4o API, and saves the image along with the generated audio description text and MP3 file.
-
 ## Instructions
 
 1. **Connect to WiFi**
@@ -25,8 +21,9 @@ This application captures the screen, generates an audio description using the C
    - Let the browser screen open in full screen mode. This allows the Python application to capture the screen effectively and send it to the ChatGPT4o API for processing.
 
 5. **Output Data**
-   - The input image, along with the generated audio description text and MP3 file, will be saved in the `data` folder within the project directory.
+   - The input image, along with the generated audio description text and MP3 file, will be saved in the `data` folder within the project directory. Each algorithm have your respectively folder.
 
 ## Notes
+- After choose the Algorithm in python application, you will have 3 seconds to open the screen with Meta Quest 3 video.
 - Ensure you have all the necessary dependencies installed to run the Python application.
 - Make sure your firewall or network settings do not block communication between your PC and Meta Quest 3.
