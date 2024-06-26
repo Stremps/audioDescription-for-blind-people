@@ -1,11 +1,10 @@
-import pyautogui
+import shutil
 from PIL import Image
 import cv2
 import numpy as np
 
 import base64
 import os
-import ssl
 import time
 from datetime import datetime
 
@@ -56,15 +55,42 @@ def text_to_speech(text, filename):
 
     response.stream_to_file(filename)
 
-
-def convert_cv2_to_base64(cv2_image):
+def move_and_rename(filename):
     """
-    Convert an OpenCV image to a base64 encoded string.
+    Move and rename a single JPG file from one directory to another.
 
-    :param cv2_image: OpenCV Image (numpy array)
+    :param filename: String, the path to the destination directory where the file should be moved with the new name.
+    """
+    # List all the files .jpg in the origin path
+    files = [f for f in os.listdir("./data/Screenshots") if f.endswith('.jpg')]
+
+    # Check if there is just one file
+    if len(files) != 1:
+        raise ValueError("There should be exactly one JPG file in the source directory.")
+    
+    # Make the complete path from the original path
+    original_file_path = os.path.join("./data/Screenshots", files[0])
+
+
+    # Move and rename the file
+    shutil.move(original_file_path, filename)
+
+
+def convert_image_to_base64(filepath):
+    """
+    Open an image from a filepath, then convert it to a base64 encoded string.
+
+    :param filepath: String path to the image file
     :return: Base64 encoded string of the image
     """
-    # Encode the image to a buffer
+    # load the imagem from the path
+    cv2_image = cv2.imread(filepath)
+
+    # Verify if the image was load
+    if cv2_image is None:
+        raise ValueError("Image not found or the format is not supported.")
+
+    # Encode the image to a buffer in PNG format
     _, buffer = cv2.imencode('.png', cv2_image)
 
     # Convert the buffer to a base64 string
@@ -72,44 +98,39 @@ def convert_cv2_to_base64(cv2_image):
 
     return base64_string
 
-
-def pil_to_cv2(pil_image):
-    """
-    Convert a PIL Image to an OpenCV image (numpy array).
-
-    :param pil_image: PIL Image object
-    :return: OpenCV Image (numpy array)
-    """
-    open_cv_image = np.array(pil_image)
-    # Convert RGB to BGR
-    open_cv_image = cv2.cvtColor(open_cv_image, cv2.COLOR_RGB2BGR)
-    return open_cv_image
-
-
 def capture_screenshot():
     """
-    Capture a screenshot using pyautogui.
+    Capture a screenshot using ADB commands to set properties and capture an image from Meta Quest 3.
 
-    :return: PIL Image object of the screenshot
+    :return: Combined output from the commands or an error message
     """
-    screenshot = pyautogui.screenshot()
-    return screenshot
+    try:
+        # Properties of the print
+        crop_command = "adb shell setprop debug.oculus.screenCaptureEye 1 && " \
+                       "adb shell setprop debug.oculus.capture.width 1920 && " \
+                       "adb shell setprop debug.oculus.capture.height 1080"
 
+        # Execute the command for image configuration
+        result1 = subprocess.run(crop_command, shell=True, text=True, check=True)
 
-def crop_to_square(image):
-    """
-    Crop the image to the biggest square region in the middle.
+        # Print the image
+        print_command = "adb shell am startservice -n com.oculus.metacam/.capture.CaptureService -a TAKE_SCREENSHOT"
+        
+        # Transfer the imagem from the oculus to the computer
+        transfer_command = "adb pull /sdcard/Oculus/Screenshots/ ./data/ && " \
+                           "adb shell rm /sdcard/Oculus/Screenshots/*.jpg"
 
-    :param image: OpenCV Image (numpy array)
-    :return: Cropped OpenCV Image (numpy array)
-    """
-    height, width, _ = image.shape
-    min_dim = min(height, width)
-    start_x = width // 2 - min_dim // 2
-    start_y = height // 2 - min_dim // 2
-    cropped_image = image[start_y:start_y + min_dim, start_x:start_x + min_dim]
-    return cropped_image
+        # Execute the print command
+        result2 = subprocess.run(print_command, shell=True, text=True, capture_output=True, check=True)
+        
+        time.sleep(0.5)
+        
+        result3 = subprocess.run(transfer_command, shell=True, text=True, check=True)
 
+        return result1.stdout
+
+    except subprocess.CalledProcessError as e:
+        return f"Error trying to execute the adb command: {e}"
 
 while True:
     print("\nMenu:")
@@ -126,10 +147,11 @@ while True:
         if (1 <= numberOption <= 5):
             break
         print("Invalid option, try again!")
-
+    
+    
     # time for the user change the screen
     print("You have 3 seconds to change to the screen application...")
-    time.sleep(3)
+    #time.sleep(3)
 
     # Start counting the time
     startTime = time.perf_counter()
@@ -157,20 +179,15 @@ while True:
     filenamem = f"data/{descOption}/{timestamp}.mp3"
 
     # Capture the screenshot
-    pil_screenshot = capture_screenshot()
+    capture_screenshot()
 
-    # Convert the PIL screenshot to an OpenCV image
-    cv2_screenshot = pil_to_cv2(pil_screenshot)
-
-    # Crop the OpenCV image to the biggest square region in the middle
-    cropped_image = crop_to_square(cv2_screenshot)
-
-    cv2.imwrite(filenamej, cropped_image)
+    # Move and rename the file save in /data/Screenshots path
+    move_and_rename(filenamej)
 
     # Convert the OpenCV image to a base64 encoded string
-    base64_string = convert_cv2_to_base64(cropped_image)
+    base64_string = convert_image_to_base64(filenamej)
 
-    # Time of printScreen, crop and conversion
+    # Time of printScreen, move, rename and conversion
     printScreenTime = time.perf_counter() - startTime
 
     if inputOption == '1':
@@ -230,8 +247,3 @@ while True:
     print(f"Conversion text to MP3 time: {textToMP3Time}")
     print(f"Audio time: {audioTime}")
     print(f"Total Time: {totalTime}")
-
-# Display the cropped image using OpenCV
-# cv2.imshow('Cropped Screenshot', cropped_image)
-# cv2.waitKey(1)  # Wait for a key press to close the window
-# cv2.destroyAllWindows()  # Close the window

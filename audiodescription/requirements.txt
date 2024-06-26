@@ -5,3 +5,4 @@ numpy
 openai
 pydub
 pygame
+adb
