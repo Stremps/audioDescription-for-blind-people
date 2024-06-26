@@ -16,6 +16,7 @@ This directory contains scripts that generate a general description of the scena
 Scripts in this directory assist with locomotion by describing the path ahead. They focus on identifying clear pathways and highlighting obstacles, thus aiding users in navigating their environments safely.
 <div align="center">
   <img src="https://i.ibb.co/c3SXV7Q/locomotion1-Borrado.jpg" width="30%" height="30%" alt="Example of AudioDescription Locomotion">
+</div>
 
 ### `AudioDescriptionPerson`
 The focus of this directory is to describe the facial features of a person centered on the screen. These scripts provide detailed descriptions of facial characteristics, helping users form a mental image of the people around them.
