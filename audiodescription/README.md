@@ -32,4 +32,4 @@
 
 ## Notes
 - Ensure you have all the necessary dependencies installed to run the Python application.
-- Make sure that you have allowed Meta Quest 3 USB debugging with your compute
+- Make sure that you have allowed Meta Quest 3 USB debugging with your computer
