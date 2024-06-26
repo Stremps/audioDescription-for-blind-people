@@ -2,7 +2,7 @@
 # Audio Description Project for Visually Impaired
 
 ## Overview
-This project aims to validate the potential of providing targeted audio descriptions for visually impaired individuals using Head-Mounted Displays (HMDs). Each directory in this repository contains Python scripts designed to communicate with the ChatGPT-4o model, sending images for descriptive analysis and receiving audio outputs tailored to specific needs.
+This project aims to validate the potential of providing targeted audio descriptions for visually impaired individuals using Head-Mounted Displays (HMDs). The main directory of this project contain Python script designed to communicate with the ChatGPT-4o model, sending images for descriptive analysis and receiving audio outputs tailored to specific needs.
 
 ## Algorithm Options
 
@@ -34,4 +34,4 @@ This directory's scripts are designed to read any text present in front of the u
 The purpose of this project is to explore and demonstrate how specific audio descriptions generated through advanced AI models like ChatGPT-4o can aid visually impaired individuals. By leveraging HMD technology, the project seeks to create more inclusive and accessible experiences, potentially transforming how visually impaired individuals perceive and interact with the world.
 
 ## Usage
-To use the scripts, follow the setup instructions provided in the directory "audiodescription". Each script is designed to interface seamlessly with ChatGPT-4o for real-time processing of visual data captured through HMDs.
+To use the scripts, follow the setup instructions provided in the directory "audiodescription". Each option in the script is designed to interface seamlessly with ChatGPT-4o for real-time processing of visual data captured through HMDs.
