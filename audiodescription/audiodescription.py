@@ -13,37 +13,40 @@ import pygame
 
 from openai import OpenAI
 
-client = OpenAI(api_key="(API_KEY_HERE)")
+with open("Api_key.txt", 'r') as file:
+    api_key_file = file.read()
+
+client = OpenAI(api_key=api_key_file)
 
 MODEL = "gpt-4o"
 
 audio_filename = "audiodescription.mp3"
 
 
-# def play_mp3(file_path):
-#    """
-#    Play an MP3 file using afplay on macOS.
-#
-#    :param file_path: Path to the MP3 file
-#    """
-#    try:
-#        subprocess.run(['afplay', file_path])
-#    except FileNotFoundError:
-#        print("afplay command not found. Make sure you're on macOS and afplay is installed.")
-
 def play_mp3(file_path):
-    # Initialize the mixer module in pygame
-    pygame.mixer.init()
+    """
+    Play an MP3 file in Meta Quest 3
 
-    # Load the mp3 file
-    pygame.mixer.music.load(file_path)
+    :param file_path: Path to the MP3 file
+    """
 
-    # Play the mp3 file
-    pygame.mixer.music.play()
-
-    # Let the music play in the background
-    while pygame.mixer.music.get_busy():
-        time.sleep(1)
+    #Check the creation of the AudioDesc folder in the Meta Quest 3 directory.
+    folder_command = "adb shell '[ -d \"/sdcard/AudioDesc\" ] || mkdir \"/sdcard/AudioDesc\"'"
+    
+    #Execute the folder command
+    subprocess.run(folder_command, shell=True, text=True, check=True)
+    
+    #Move the created audio to Meta Quest 3, overwriting the previous audio.mp3
+    move_command = f"adb push {file_path} /sdcard/AudioDesc/audio.mp3"
+    
+    # Move the designated file
+    subprocess.run(move_command, shell=True, text=True, check=True)
+    
+    # Play the audio
+    play_command = "adb shell am start -a android.intent.action.VIEW -d file:///sdcard/AudioDesc/audio.mp3 -t audio/mp3"
+    
+    subprocess.run(play_command, shell=True, text=True, check=True)
+    
 
 
 def text_to_speech(text, filename):
@@ -148,11 +151,6 @@ while True:
             break
         print("Invalid option, try again!")
     
-    
-    # time for the user change the screen
-    print("You have 3 seconds to change to the screen application...")
-    #time.sleep(3)
-
     # Start counting the time
     startTime = time.perf_counter()
 
