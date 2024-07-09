@@ -20,8 +20,27 @@ client = OpenAI(api_key=api_key_file)
 
 MODEL = "gpt-4o"
 
-audio_filename = "audiodescription.mp3"
-
+def boot_start():
+    """
+    Play an MP3 file in Meta Quest 3 when the code start
+    """
+    
+    #Check the creation of the AudioDesc folder in the Meta Quest 3 directory.
+    folder_command = "adb shell '[ -d \"/sdcard/AudioDesc\" ] || mkdir \"/sdcard/AudioDesc\"'"
+    
+    #Execute the folder command
+    subprocess.run(folder_command, shell=True, text=True, check=True)
+    
+    #Move the boot audio to Meta Quest 3, overwriting the previous audio.mp3
+    move_command = f"adb push Sounds/Boot_Sound.mp3 /sdcard/AudioDesc/audio.mp3"
+    
+    # Move the designated file
+    subprocess.run(move_command, shell=True, text=True, check=True)
+    
+    # Play the audio
+    play_command = "adb shell am start -a android.intent.action.VIEW -d file:///sdcard/AudioDesc/audio.mp3 -t audio/mp3"
+    
+    subprocess.run(play_command, shell=True, text=True, check=True)
 
 def play_mp3(file_path):
     """
@@ -29,12 +48,6 @@ def play_mp3(file_path):
 
     :param file_path: Path to the MP3 file
     """
-
-    #Check the creation of the AudioDesc folder in the Meta Quest 3 directory.
-    folder_command = "adb shell '[ -d \"/sdcard/AudioDesc\" ] || mkdir \"/sdcard/AudioDesc\"'"
-    
-    #Execute the folder command
-    subprocess.run(folder_command, shell=True, text=True, check=True)
     
     #Move the created audio to Meta Quest 3, overwriting the previous audio.mp3
     move_command = f"adb push {file_path} /sdcard/AudioDesc/audio.mp3"
@@ -134,6 +147,8 @@ def capture_screenshot():
 
     except subprocess.CalledProcessError as e:
         return f"Error trying to execute the adb command: {e}"
+
+boot_start()
 
 while True:
     print("\nMenu:")
