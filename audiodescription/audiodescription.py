@@ -12,6 +12,7 @@ import subprocess
 import pygame
 
 from openai import OpenAI
+import re
 
 with open("Api_key.txt", 'r') as file:
     api_key_file = file.read()
@@ -147,6 +148,42 @@ def capture_screenshot():
 
     except subprocess.CalledProcessError as e:
         return f"Error trying to execute the adb command: {e}"
+    
+def get_wifi_details():
+    """
+    Retrieve detailed WiFi connection statistics using nmcli on Linux.
+    """
+    try:
+        # Run the nmcli command to get full details of the active Wi-Fi connection.
+        result = subprocess.run(['nmcli', '-t', '-f', 'IN-USE,SSID,BSSID,MODE,CHAN,RATE,SIGNAL,BARS,SECURITY', 'device', 'wifi'], capture_output=True, text=True)
+        if result.returncode == 0:
+            # Process the output to find the line with the active network (marked with '*').
+            for line in result.stdout.splitlines():
+                if '*' in line:  # Check if the line contains the active network
+                    # Remove unwanted characters
+                    cleaned_line = re.sub(r'\\.', '', line)
+                    parts = cleaned_line.split(':')
+                    details = {
+                        'ssid': parts[1],
+                        'bssid': parts[2],
+                        'mode': parts[3],
+                        'channel': parts[4],
+                        'rate': parts[5],
+                        'signal': parts[6],  # Keep as a temporary string
+                        'bars': parts[7],
+                        'security': parts[8]
+                    }
+                    # Try to convert the signal to int, otherwise set as error;
+                    try:
+                        details['signal'] = int(details['signal'])
+                    except ValueError:
+                        details['signal'] = "Invalid signal data: " + details['signal']
+                    return details
+    except Exception as e:
+        return {'error': str(e)}
+
+    return {'error': "No active Wi-Fi connection found."}
+
 
 boot_start()
 
@@ -188,8 +225,10 @@ while True:
 
     # Create filenames with the timestamp
     filenamej = f"data/{descOption}/{timestamp}.jpg"
-    filenamet = f"data/{descOption}/{timestamp}.txt"
+    filenamet = f"data/{descOption}/{timestamp}_Text.txt"
     filenamem = f"data/{descOption}/{timestamp}.mp3"
+    filenamew = f"data/{descOption}/{timestamp}_Wifi.txt"
+    filenamet = f"data/{descOption}/{timestamp}_Time.txt"
 
     # Capture the screenshot
     capture_screenshot()
@@ -219,6 +258,9 @@ while True:
         role = "You are a person that provides professional audio description services. Help me describe the images I show you in Brazilian portuguese."
         text = "Please describe this image. Do not start the phrase with 'A imagem '. Describe the person in the center of the image. Focus on the facial features. Describe as gently as you can. I'm blind and want to know the person by her face."
 
+    # Capture Wi-Fi details
+    wifi_details = get_wifi_details()
+    
     response = client.chat.completions.create(
         model=MODEL,
         messages=[
@@ -227,7 +269,7 @@ while True:
                 {"type": "text", "text": f"{text}"},
                 {"type": "image_url", "image_url": {
                     "url": f"data:image/png;base64,{base64_string}"}
-                 }
+                }
             ]}
         ],
         temperature=0.0,
@@ -237,12 +279,23 @@ while True:
 
     # Time of sending and receiving data from GPT-4o
     responseTime = time.perf_counter() - startTime - printScreenTime
-
+    
     print(text)
 
     with open(filenamet, 'w') as file:
         file.write(text)
-
+    
+    # Evaluates the signal quality
+    if 'signal' in wifi_details and isinstance(wifi_details['signal'], int):
+        signal_strength = wifi_details['signal']
+        quality_description = "High" if signal_strength > 75 else "Medium" if signal_strength > 50 else "Low"
+        wifi_details['quality_description'] = quality_description
+    else:
+        wifi_details['quality_description'] = "Unavailable"    
+    with open(filenamew, 'w') as file:
+        for key, value in wifi_details.items():
+            file.write(f"{key}: {value}\n")
+    
     text_to_speech(text, filenamem)
 
     textToMP3Time = time.perf_counter() - startTime - printScreenTime - responseTime
@@ -254,6 +307,9 @@ while True:
 
     # Total time of the application
     totalTime = time.perf_counter() - startTime
+    
+    with open(filenamet, 'w') as file:
+        file.write(f"PrintScreen time: {printScreenTime}\nResponse from IA time: {responseTime}\nConversion text to MP3 time: {textToMP3Time}\nAudio time: {audioTime}\nTotal Time: {totalTime}")
 
     print(f"PrintScreen time: {printScreenTime}")
     print(f"Response from IA time: {responseTime}")
