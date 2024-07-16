@@ -1,7 +1,0 @@
-pyautogui
-Pillow
-opencv-python
-numpy
-openai
-pydub
-pygame

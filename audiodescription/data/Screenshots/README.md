@@ -1,0 +1,1 @@
+Temporary file to receive the screeshot from the adb
