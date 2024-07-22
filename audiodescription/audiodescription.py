@@ -1,191 +1,21 @@
-import shutil
-from PIL import Image
-import cv2
-import numpy as np
-
-import base64
-import os
 import time
 from datetime import datetime
 
-import subprocess
-import pygame
+
+from src import parameters_functions as parameters
+from src import audio_functions as audio
+from src import screenshot_functions as screenshot
 
 from openai import OpenAI
-import re
 
 with open("Api_key.txt", 'r') as file:
     api_key_file = file.read()
 
 client = OpenAI(api_key=api_key_file)
 
-MODEL = "gpt-4o"
+MODEL = "gpt-4o"    
 
-def boot_start():
-    """
-    Play an MP3 file in Meta Quest 3 when the code start
-    """
-    
-    #Check the creation of the AudioDesc folder in the Meta Quest 3 directory.
-    folder_command = "adb shell '[ -d \"/sdcard/AudioDesc\" ] || mkdir \"/sdcard/AudioDesc\"'"
-    
-    #Execute the folder command
-    subprocess.run(folder_command, shell=True, text=True, check=True)
-    
-    #Move the boot audio to Meta Quest 3, overwriting the previous audio.mp3
-    move_command = f"adb push Sounds/Boot_Sound.mp3 /sdcard/AudioDesc/audio.mp3"
-    
-    # Move the designated file
-    subprocess.run(move_command, shell=True, text=True, check=True)
-    
-    # Play the audio
-    play_command = "adb shell am start -a android.intent.action.VIEW -d file:///sdcard/AudioDesc/audio.mp3 -t audio/mp3"
-    
-    subprocess.run(play_command, shell=True, text=True, check=True)
-
-def play_mp3(file_path):
-    """
-    Play an MP3 file in Meta Quest 3
-
-    :param file_path: Path to the MP3 file
-    """
-    
-    #Move the created audio to Meta Quest 3, overwriting the previous audio.mp3
-    move_command = f"adb push {file_path} /sdcard/AudioDesc/audio.mp3"
-    
-    # Move the designated file
-    subprocess.run(move_command, shell=True, text=True, check=True)
-    
-    # Play the audio
-    play_command = "adb shell am start -a android.intent.action.VIEW -d file:///sdcard/AudioDesc/audio.mp3 -t audio/mp3"
-    
-    subprocess.run(play_command, shell=True, text=True, check=True)
-    
-
-
-def text_to_speech(text, filename):
-    response = client.audio.speech.create(
-        model="tts-1",
-        voice="alloy",
-        input=text
-    )
-
-    response.stream_to_file(filename)
-
-def move_and_rename(filename):
-    """
-    Move and rename a single JPG file from one directory to another.
-
-    :param filename: String, the path to the destination directory where the file should be moved with the new name.
-    """
-    # List all the files .jpg in the origin path
-    files = [f for f in os.listdir("./data/Screenshots") if f.endswith('.jpg')]
-
-    # Check if there is just one file
-    if len(files) != 1:
-        raise ValueError("There should be exactly one JPG file in the source directory.")
-    
-    # Make the complete path from the original path
-    original_file_path = os.path.join("./data/Screenshots", files[0])
-
-
-    # Move and rename the file
-    shutil.move(original_file_path, filename)
-
-
-def convert_image_to_base64(filepath):
-    """
-    Open an image from a filepath, then convert it to a base64 encoded string.
-
-    :param filepath: String path to the image file
-    :return: Base64 encoded string of the image
-    """
-    # load the imagem from the path
-    cv2_image = cv2.imread(filepath)
-
-    # Verify if the image was load
-    if cv2_image is None:
-        raise ValueError("Image not found or the format is not supported.")
-
-    # Encode the image to a buffer in PNG format
-    _, buffer = cv2.imencode('.png', cv2_image)
-
-    # Convert the buffer to a base64 string
-    base64_string = base64.b64encode(buffer).decode('utf-8')
-
-    return base64_string
-
-def capture_screenshot():
-    """
-    Capture a screenshot using ADB commands to set properties and capture an image from Meta Quest 3.
-
-    :return: Combined output from the commands or an error message
-    """
-    try:
-        # Properties of the print
-        crop_command = "adb shell setprop debug.oculus.screenCaptureEye 1 && " \
-                       "adb shell setprop debug.oculus.capture.width 1920 && " \
-                       "adb shell setprop debug.oculus.capture.height 1080"
-
-        # Execute the command for image configuration
-        result1 = subprocess.run(crop_command, shell=True, text=True, check=True)
-
-        # Print the image
-        print_command = "adb shell am startservice -n com.oculus.metacam/.capture.CaptureService -a TAKE_SCREENSHOT"
-        
-        # Transfer the imagem from the oculus to the computer
-        transfer_command = "adb pull /sdcard/Oculus/Screenshots/ ./data/ && " \
-                           "adb shell rm /sdcard/Oculus/Screenshots/*.jpg"
-
-        # Execute the print command
-        result2 = subprocess.run(print_command, shell=True, text=True, capture_output=True, check=True)
-        
-        time.sleep(0.5)
-        
-        result3 = subprocess.run(transfer_command, shell=True, text=True, check=True)
-
-        return result1.stdout
-
-    except subprocess.CalledProcessError as e:
-        return f"Error trying to execute the adb command: {e}"
-    
-def get_wifi_details():
-    """
-    Retrieve detailed WiFi connection statistics using nmcli on Linux.
-    """
-    try:
-        # Run the nmcli command to get full details of the active Wi-Fi connection.
-        result = subprocess.run(['nmcli', '-t', '-f', 'IN-USE,SSID,BSSID,MODE,CHAN,RATE,SIGNAL,BARS,SECURITY', 'device', 'wifi'], capture_output=True, text=True)
-        if result.returncode == 0:
-            # Process the output to find the line with the active network (marked with '*').
-            for line in result.stdout.splitlines():
-                if '*' in line:  # Check if the line contains the active network
-                    # Remove unwanted characters
-                    cleaned_line = re.sub(r'\\.', '', line)
-                    parts = cleaned_line.split(':')
-                    details = {
-                        'ssid': parts[1],
-                        'bssid': parts[2],
-                        'mode': parts[3],
-                        'channel': parts[4],
-                        'rate': parts[5],
-                        'signal': parts[6],  # Keep as a temporary string
-                        'bars': parts[7],
-                        'security': parts[8]
-                    }
-                    # Try to convert the signal to int, otherwise set as error;
-                    try:
-                        details['signal'] = int(details['signal'])
-                    except ValueError:
-                        details['signal'] = "Invalid signal data: " + details['signal']
-                    return details
-    except Exception as e:
-        return {'error': str(e)}
-
-    return {'error': "No active Wi-Fi connection found."}
-
-
-boot_start()
+audio.boot_start()
 
 while True:
     print("\nMenu:")
@@ -215,13 +45,13 @@ while True:
 
     # guide to folder
     if inputOption == '1':
-        descOption = "Base"
+        descOption = "base"
     elif inputOption == '2':
-        descOption = "Locomotion"
+        descOption = "locomotion"
     elif inputOption == '3':
-        descOption = "Text"
+        descOption = "text"
     elif inputOption == '4':
-        descOption = "Person"
+        descOption = "person"
 
     # Create filenames with the timestamp
     filenamej = f"data/{descOption}/{timestamp}.jpg"
@@ -231,13 +61,13 @@ while True:
     filenamet = f"data/{descOption}/{timestamp}_Time.txt"
 
     # Capture the screenshot
-    capture_screenshot()
+    screenshot.capture_screenshot()
 
     # Move and rename the file save in /data/Screenshots path
-    move_and_rename(filenamej)
+    screenshot.move_and_rename(filenamej)
 
     # Convert the OpenCV image to a base64 encoded string
-    base64_string = convert_image_to_base64(filenamej)
+    base64_string = screenshot.convert_image_to_base64(filenamej)
 
     # Time of printScreen, move, rename and conversion
     printScreenTime = time.perf_counter() - startTime
@@ -248,7 +78,7 @@ while True:
 
     elif inputOption == '2':
         role = "You are a person that provides professional audio description services for blind people. Help me describe the images I show you in Brazilian portuguese."
-        text = "Please describe this image focusing in aiding locomotion for a blind person. I want to know if the way ahead is free for walking. Describe the scene to help me to walk with more confidence, knowing if there is any obstacle in front of me. Be brief, i want a short sentence telling me only the necessary to step foward.x'"
+        text = "Please describe this image focusing in aiding locomotion for a blind person. I want to know if the way ahead is free for walking. Describe the scene to help me to walk with more confidence, knowing if there is any obstacle in front of me. Be brief, i want a short sentence telling me only the necessary to step foward.'"
 
     elif inputOption == '3':
         role = "You are a person that provides professional audio description services. Help me describe the images I show you in Brazilian portuguese."
@@ -259,7 +89,7 @@ while True:
         text = "Please describe this image. Do not start the phrase with 'A imagem '. Describe the person in the center of the image. Focus on the facial features. Describe as gently as you can. I'm blind and want to know the person by her face."
 
     # Capture Wi-Fi details
-    wifi_details = get_wifi_details()
+    wifi_details = parameters.get_wifi_details()
     
     response = client.chat.completions.create(
         model=MODEL,
@@ -285,22 +115,13 @@ while True:
     with open(filenamet, 'w') as file:
         file.write(text)
     
-    # Evaluates the signal quality
-    if 'signal' in wifi_details and isinstance(wifi_details['signal'], int):
-        signal_strength = wifi_details['signal']
-        quality_description = "High" if signal_strength > 75 else "Medium" if signal_strength > 50 else "Low"
-        wifi_details['quality_description'] = quality_description
-    else:
-        wifi_details['quality_description'] = "Unavailable"    
-    with open(filenamew, 'w') as file:
-        for key, value in wifi_details.items():
-            file.write(f"{key}: {value}\n")
+    parameters.save_file_wifi(filenamew, wifi_details)
     
-    text_to_speech(text, filenamem)
+    audio.text_to_speech(text, filenamem, client)
 
     textToMP3Time = time.perf_counter() - startTime - printScreenTime - responseTime
 
-    play_mp3(filenamem)
+    audio.play_mp3(filenamem)
 
     # Time of the audio created
     audioTime = time.perf_counter() - startTime - printScreenTime - responseTime - textToMP3Time
@@ -308,11 +129,4 @@ while True:
     # Total time of the application
     totalTime = time.perf_counter() - startTime
     
-    with open(filenamet, 'w') as file:
-        file.write(f"PrintScreen time: {printScreenTime}\nResponse from IA time: {responseTime}\nConversion text to MP3 time: {textToMP3Time}\nAudio time: {audioTime}\nTotal Time: {totalTime}")
-
-    print(f"PrintScreen time: {printScreenTime}")
-    print(f"Response from IA time: {responseTime}")
-    print(f"Conversion text to MP3 time: {textToMP3Time}")
-    print(f"Audio time: {audioTime}")
-    print(f"Total Time: {totalTime}")
+    parameters.save_file_time(filenamet, printScreenTime, responseTime, textToMP3Time, totalTime)
