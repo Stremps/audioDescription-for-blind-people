@@ -55,10 +55,10 @@ while True:
 
     # Create filenames with the timestamp
     filenamej = f"data/{descOption}/{timestamp}.jpg"
-    filenamet = f"data/{descOption}/{timestamp}_Text.txt"
+    filenamete = f"data/{descOption}/{timestamp}_Text.txt"
     filenamem = f"data/{descOption}/{timestamp}.mp3"
     filenamew = f"data/{descOption}/{timestamp}_Wifi.txt"
-    filenamet = f"data/{descOption}/{timestamp}_Time.txt"
+    filenameti = f"data/{descOption}/{timestamp}_Time.txt"
 
     # Capture the screenshot
     screenshot.capture_screenshot()
@@ -112,7 +112,7 @@ while True:
     
     print(text)
 
-    with open(filenamet, 'w') as file:
+    with open(filenamete, 'w') as file:
         file.write(text)
     
     parameters.save_file_wifi(filenamew, wifi_details)
@@ -129,4 +129,4 @@ while True:
     # Total time of the application
     totalTime = time.perf_counter() - startTime
     
-    parameters.save_file_time(filenamet, printScreenTime, responseTime, textToMP3Time, totalTime)
+    parameters.save_file_time(filenameti, printScreenTime, responseTime, textToMP3Time, totalTime)
